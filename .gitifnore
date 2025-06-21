@@ -1,0 +1,27 @@
+# Node modules
+node_modules/
+
+# Miljövariabler
+.env
+
+# Loggar
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS-filer
+.DS_Store
+Thumbs.db
+
+# Temp/Cache
+tmp/
+.cache/
+dist/
+build/
+
+# Editor/IDE-filer
+.vscode/
+.idea/
+*.swp
