@@ -2,29 +2,56 @@ const express = require("express");
 const http = require("http");
 const cors = require("cors");
 const { Server } = require("socket.io");
+const { Pool } = require("pg");
 
 const config = require("./config/config");
+const logger = require("./utils/logger");
 
-const app = express();
-app.use(cors());
-app.use(express.json());
+logger.log("Laddar config...");
+const port = config.get("gameProtocolPort", 7172);
 
-const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*" } });
-const port = config.get("port", 3000);
+logger.log("Kopplar upp mot databas...");
 
-io.on("connection", (socket) => {
-  console.log("Spelare ansluten:", socket.id);
+const dbPool = new Pool({
+  host: config.get("pg_host"),
+  port: config.get("pg_port"),
+  database: config.get("pg_database"),
+  user: config.get("pg_user"),
+  password: config.get("pg_password"),
+});
 
-  socket.on("disconnect", () => {
-    console.log("Spelare kopplad från:", socket.id);
+dbPool.connect()
+  .then(client => {
+    logger.success("Databasen är ansluten!");
+
+    // Starta servern när DB är OK
+    const app = express();
+    app.use(cors());
+    app.use(express.json());
+
+    const server = http.createServer(app);
+    const io = new Server(server, { cors: { origin: "*" } });
+
+    io.on("connection", (socket) => {
+      logger.log(`Spelare ansluten: ${socket.id}`);
+      socket.on("disconnect", () => {
+        logger.log(`Spelare kopplad från: ${socket.id}`);
+      });
+    });
+
+    app.get("/", (req, res) => {
+      res.send("Swev Server is running!");
+    });
+
+    server.listen(port, () => {
+      logger.success(`Servern körs på port ${port}`);
+    });
+
+    // Släpp klienten
+    client.release();
+  })
+  .catch(err => {
+    logger.error("Misslyckades att ansluta till databasen!");
+    logger.error(err.message);
+    process.exit(1);
   });
-});
-
-app.get("/", (req, res) => {
-  res.send("Swev Server is running!");
-});
-
-server.listen(config.port, () => {
-  console.log(`Servern körs på port ${config.port}`);
-});

@@ -1,12 +1,9 @@
-const path = require("path");
 const { runLuaFile, getLuaGlobal } = require("../utils/lua");
+const L = runLuaFile("config.lua");
 
-const configPath = path.join(__dirname, "..", "..", "config.lua");
-const env = runLuaFile(configPath);
-
-function get(key, fallback = undefined) {
-  const val = getLuaGlobal(env, key);
-  return val !== undefined ? val : fallback;
+function get(key, fallback) {
+  const val = getLuaGlobal(L, key);
+  return typeof val !== "undefined" ? val : fallback;
 }
 
 module.exports = { get };
