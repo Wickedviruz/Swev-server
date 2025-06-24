@@ -27,9 +27,12 @@ dbPool.connect()
     // Starta servern när DB är OK
     const app = express();
     const accountRouter = require('./routes/account');
+    const characterRouter = require('./routes/character');
+
     app.use(cors());
     app.use(express.json());
     app.use('/api/account', accountRouter);
+    app.use('/api/character', characterRouter);
 
     const server = http.createServer(app);
     const io = new Server(server, { cors: { origin: "*" } });
