@@ -37,4 +37,18 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// DELETE
+router.delete('/', async (req, res) => {
+  const { accountId, password } = req.body;
+  if (!accountId || !password) {
+    return res.status(400).json({ error: "Missing required fields." });
+  }
+  try {
+    await accountService.deleteAccount(accountId, password);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(403).json({ error: err.message });
+  }
+});
+
 module.exports = router;

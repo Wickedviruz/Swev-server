@@ -1,5 +1,5 @@
 const { Pool } = require('pg');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const config = require('../config/config');
 const dbPool = new Pool({
   host: config.get("pg_host"),
@@ -35,8 +35,23 @@ async function validatePassword(username, password) {
   return match ? user : null;
 }
 
+async function deleteAccount(accountId, password) {
+  // Kontrollera att lösenordet är rätt
+  const accRes = await dbPool.query('SELECT password_hash FROM accounts WHERE id = $1', [accountId]);
+  if (!accRes.rows.length) throw new Error("Account not found.");
+
+  const valid = await bcrypt.compare(password, accRes.rows[0].password_hash);
+  if (!valid) throw new Error("Incorrect password.");
+
+  // Ta bort kontot (och därmed alla karaktärer via CASCADE)
+  const delRes = await dbPool.query('DELETE FROM accounts WHERE id = $1 RETURNING id', [accountId]);
+  if (delRes.rowCount === 0) throw new Error("Account could not be deleted.");
+  return true;
+}
+
 module.exports = {
   register,
   findByUsername,
   validatePassword,
+  deleteAccount
 };
