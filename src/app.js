@@ -48,7 +48,15 @@ io.on("connection", (socket) => {
     return;
   }
 
-  // Hämta karaktär (som innan)
+  // Kolla om någon redan är inloggad med samma characterId, "kasta ut" den gamla
+  for (const [sockId, player] of players) {
+    if (player.id === Number(characterId)) {
+      logger.log(`Duplicate login detected for characterId ${characterId}, disconnecting previous socket: ${sockId}`);
+      io.sockets.sockets.get(sockId)?.disconnect(true);
+      players.delete(sockId); // Viktigt! Ta bort den gamla från players-map
+    }
+  }
+
   dbPool.query("SELECT * FROM characters WHERE id = $1", [characterId])
     .then(result => {
       if (!result.rows.length) {
@@ -57,20 +65,26 @@ io.on("connection", (socket) => {
         return;
       }
       const character = result.rows[0];
+      console.log("Laddar karaktär från DB:", character);
 
       // Lägg till spelaren i listan
       const playerData = {
         id: character.id,
         name: character.name,
-        x: 100, // Startposition
-        y: 100,
+        x: character.pos_x ?? 100,
+        y: character.pos_y ?? 100,
+        level: character.level,
+        health: character.health,
+        healthmax: character.healthmax,
+        mana: character.mana,
+        manamax: character.manamax,
       };
       players.set(socket.id, playerData);
 
-      // Skicka lista på ALLA spelare till nya klienten
+      // Skicka lista på ALLA spelare till nya klienten (med namn)
       socket.emit("currentPlayers", Array.from(players.values()));
 
-      // Informera ALLA andra att en ny spelare joinat
+      // Informera ALLA andra att en ny spelare joinat (med namn)
       socket.broadcast.emit("playerJoined", playerData);
 
       // Ta emot positionsuppdatering
@@ -79,15 +93,51 @@ io.on("connection", (socket) => {
         if (!p) return;
         p.x = data.x;
         p.y = data.y;
-        logger.log(`Player ${p.name} moved to (${p.x}, ${p.y})`);
-        io.emit("playerMoved", { id: p.id, x: p.x, y: p.y }); // Skicka till ALLA, inkl. den som flyttade!
+        io.emit("playerMoved", { id: p.id, x: p.x, y: p.y, name: p.name });
+      });
+
+      socket.on("takeDamage", (amount) => {
+        const player = players.get(socket.id);
+        if (!player) return;
+        player.health = Math.max(0, player.health - amount);
+
+        // Skicka uppdaterade stats tillbaka till klienten
+        socket.emit("playerStats", {
+          id: player.id,
+          name: player.name,
+          level: player.level,
+          health: player.health,
+          healthmax: player.healthmax,
+          mana: player.mana,
+          manamax: player.manamax,
+          // lägg till fler stats om du vill
+        });
+      });
+
+      socket.on("testDamage", () => {
+        const player = players.get(socket.id);
+        if (!player) return;
+        player.health = Math.max(0, player.health - 1);
+        socket.emit("playerStats", { ...player });
       });
 
       // Vid disconnect
-      socket.on("disconnect", () => {
+      socket.on("disconnect", async () => {
         logger.log(`Player disconnected: ${socket.id} (${character.name})`);
-        players.delete(socket.id);
-        socket.broadcast.emit("playerLeft", { id: character.id });
+        const leftPlayer = players.get(socket.id);
+
+        if (leftPlayer) {
+          try {
+            await dbPool.query(
+              "UPDATE characters SET pos_x = $1, pos_y = $2 WHERE id = $3",
+              [leftPlayer.x, leftPlayer.y, leftPlayer.id]
+            );
+          } catch (err) {
+            logger.error("Failed to save position:", err);
+          }
+          players.delete(socket.id);
+          io.emit("playerLeft", { id: leftPlayer.id });
+        }
       });
     })
     .catch(err => {
