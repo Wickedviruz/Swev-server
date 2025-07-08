@@ -1,3 +1,4 @@
+const logger = require("../utils/logger");
 module.exports = function(io, dbPool) {
   const players = new Map();
 
