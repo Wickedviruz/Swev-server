@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<npcs>
+  <npc name="Rashid" file="scripts/rashid.lua" />
+  <!-- Fler NPCs -->
+</npcs>

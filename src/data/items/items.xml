@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<items>
+  <item id="1" article="a" name="sword">
+    <attribute key="weight" value="3500"/>
+    <attribute key="defense" value="12"/>
+    <attribute key="attack" value="14"/>
+    <attribute key="weaponType" value="sword"/>
+    <attribute key="extradef" value="1"/>
+  </item>
+  <item id="2" article="a" name="rope">
+    <attribute key="weight" value="1200"/>
+    <attribute key="usable" value="1"/>
+  </item>
+  <!-- osv... -->
+</items>
