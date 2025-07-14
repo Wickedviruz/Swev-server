@@ -9,7 +9,9 @@ const logger = require("./utils/logger");
 const monsterLoader = require("./core/monsterLoader");
 const itemLoader = require('./core/ItemLoader');
 const npcLoader = require('./core/NpcLoader');
-const outfitLoader = require('./core/OutfitLoader');
+const outfitLoader = require('./core/outfitLoader');
+const WorldLoader = require('./core/worldLoader');
+const worldLoader = require("./core/worldLoader");
 
 async function bootstrap() {
   logger.log("Booting server..");
@@ -30,30 +32,32 @@ async function bootstrap() {
   // ----------- Ladda script/data här -----------
   try {
     await monsterLoader.loadAll();
-    logger.success(`[MONSTER] Loaded ${monsterLoader.monsters.size} monsters!`);
   } catch (err) {
     logger.error(`[MONSTER] Failed to load monsters: ${err.message}`);
     process.exit(1);
   }
-    try {
+  try {
     await outfitLoader.loadAll();
-    logger.success(`[OUTFITS] Loaded ${outfitLoader.outfits.size} outifts!`);
   } catch (err) {
     logger.error(`[OUTFITS] Failed to load outfits: ${err.message}`);
     process.exit(1);
   }
   try {
     await itemLoader.loadAll();
-    logger.success(`[ITEM] Loaded ${itemLoader.items.size} items!`);
   } catch (err) {
     logger.error(`[ITEM] Failed to load items: ${err.message}`);
     process.exit(1);
   }
   try {
     await npcLoader.loadAll();
-    logger.success(`[NPC] Loaded ${npcLoader.npcs.size} npcs!`);
   } catch (err) {
     logger.error(`[NPC] Failed to load npcs: ${err.message}`);
+    process.exit(1);
+  }
+  try {
+    await worldLoader.loadAll();
+  } catch (err) {
+    logger.error(`[WORLD] Failed to load outfits: ${err.message}`);
     process.exit(1);
   }
   // --------------------------------------------------------------

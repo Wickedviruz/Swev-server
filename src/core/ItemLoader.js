@@ -1,41 +1,44 @@
 const path = require('path');
-const { loadXmlFile } = require('../utils/xmlLoader');
+const xmlLoader = require('../utils/xmlLoader');
+const logger = require("../utils/logger");
 
 class ItemLoader {
-  constructor() {
-    this.items = new Map();
-  }
-
-  async loadAll() {
-    const itemFile = path.join(__dirname, '../data/items/items.xml');
-    const xmlData = await loadXmlFile(itemFile);
-
-    if (!xmlData.items?.item) throw new Error('No items in items.xml');
-    const itemArray = Array.isArray(xmlData.items.item)
-      ? xmlData.items.item
-      : [xmlData.items.item];
-
-    for (const item of itemArray) {
-      const id = parseInt(item.id, 10);
-      const name = item.name;
-      const article = item.article;
-      let attributes = {};
-      if (item.attribute) {
-        const attrs = Array.isArray(item.attribute)
-          ? item.attribute
-          : [item.attribute];
-        for (const attr of attrs) {
-          attributes[attr.key] = attr.value;
-        }
-      }
-      this.items.set(id, {
-        id,
-        name,
-        article,
-        attributes,
-      });
+    constructor() {
+        this.items = new Map();
     }
-  }
+
+    async loadAll() {
+        const filePath = path.join(__dirname, '..', 'data', 'items', 'items.xml');
+        const xmlData = await xmlLoader.loadXmlFile(filePath);
+
+        if (!xmlData.items?.item) {
+            // Om filen är tom eller saknar 'item' taggar, kasta ett fel
+            throw new Error('No items found in items.xml');
+        }
+
+        const itemList = Array.isArray(xmlData.items.item) ? xmlData.items.item : [xmlData.items.item];
+        
+        itemList.forEach(item => {
+            const itemId = parseInt(item.id, 10);
+            
+            if (isNaN(itemId)) {
+                logger.warn(`Skipping invalid item entry with name: ${item.name || 'unknown'}`);
+                return;
+            }
+
+            this.items.set(itemId, {
+                name: item.name
+                // Lägg till fler egenskaper här (t.ex. vikt, beskydd, etc.)
+            });
+        });
+        
+        // Logga framgång i loadern, precis som med OutfitLoader
+        logger.success(`[ITEM] Loaded ${this.items.size} items!`);
+    }
+
+    getItem(id) {
+        return this.items.get(id);
+    }
 }
 
 module.exports = new ItemLoader();
