@@ -36,6 +36,12 @@ module.exports = function(io, dbPool) {
             name: character.name,
             x: character.pos_x ?? 100,
             y: character.pos_y ?? 100,
+            lookbody: character.lookbody ?? 0,
+            lookfeet: character.lookfeet ?? 0,
+            lookhead: character.lookhead ?? 0,
+            looklegs: character.looklegs ?? 0,
+            looktype: character.looktype ?? 0,
+            direction: character.direction ?? 2,
             level: character.level,
             health: character.health,
             healthmax: character.healthmax,
@@ -66,7 +72,8 @@ module.exports = function(io, dbPool) {
             if (!p) return;
             p.x = data.x;
             p.y = data.y;
-            io.emit("playerMoved", { id: p.id, x: p.x, y: p.y, name: p.name });
+            p.direction = data.direction;
+            io.emit("playerMoved", { id: p.id, x: p.x, y: p.y, name: p.name, direction: p.direction });
         });
 
         socket.on("takeDamage", (amount) => {
@@ -104,16 +111,26 @@ module.exports = function(io, dbPool) {
             const leftPlayer = players.get(socket.id);
 
             if (leftPlayer) {
-            try {
-                await dbPool.query(
-                "UPDATE characters SET pos_x = $1, pos_y = $2 WHERE id = $3",
-                [leftPlayer.x, leftPlayer.y, leftPlayer.id]
-                );
-            } catch (err) {
-                logger.error("Failed to save position:", err);
-            }
-            players.delete(socket.id);
-            io.emit("playerLeft", { id: leftPlayer.id });
+                try {
+                    await dbPool.query(
+                        "UPDATE characters SET pos_x = $1, pos_y = $2, lookbody = $3, lookfeet = $4, lookhead = $5, looklegs = $6, looktype = $7, direction = $8 WHERE id = $9",
+                        [
+                            leftPlayer.x, 
+                            leftPlayer.y, 
+                            leftPlayer.lookbody,
+                            leftPlayer.lookfeet, 
+                            leftPlayer.lookhead, 
+                            leftPlayer.looklegs, 
+                            leftPlayer.looktype, 
+                            leftPlayer.direction, 
+                            leftPlayer.id
+                        ]
+                    );
+                } catch (err) {
+                    logger.error("Failed to save player data on disconnect:", err); // Uppdatera loggmeddelandet
+                }
+                players.delete(socket.id);
+                io.emit("playerLeft", { id: leftPlayer.id });
             }
         });
         })
