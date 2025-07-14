@@ -9,6 +9,7 @@ const logger = require("./utils/logger");
 const monsterLoader = require("./core/monsterLoader");
 const itemLoader = require('./core/ItemLoader');
 const npcLoader = require('./core/NpcLoader');
+const outfitLoader = require('./core/OutfitLoader');
 
 async function bootstrap() {
   logger.log("Booting server..");
@@ -32,6 +33,13 @@ async function bootstrap() {
     logger.success(`[MONSTER] Loaded ${monsterLoader.monsters.size} monsters!`);
   } catch (err) {
     logger.error(`[MONSTER] Failed to load monsters: ${err.message}`);
+    process.exit(1);
+  }
+    try {
+    await outfitLoader.loadAll();
+    logger.success(`[OUTFITS] Loaded ${outfitLoader.outfits.size} outifts!`);
+  } catch (err) {
+    logger.error(`[OUTFITS] Failed to load outfits: ${err.message}`);
     process.exit(1);
   }
   try {

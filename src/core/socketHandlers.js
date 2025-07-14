@@ -73,7 +73,7 @@ module.exports = function(io, dbPool) {
             p.x = data.x;
             p.y = data.y;
             p.direction = data.direction;
-            io.emit("playerMoved", { id: p.id, x: p.x, y: p.y, name: p.name, direction: p.direction });
+            io.emit("playerMoved", { id: p.id, x: p.x, y: p.y, direction: p.direction });
         });
 
         socket.on("takeDamage", (amount) => {
