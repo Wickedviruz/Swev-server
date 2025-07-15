@@ -39,7 +39,7 @@ class WorldLoader {
                 throw new Error(`Region file ${key}.xml is invalid.`);
             }
             this.regions.set(key, xmlData.region);
-            logger.info(`[WORLD] Loaded region ${key}. Total cached: ${this.regions.size}`);
+            logger.log(`[WORLD] Loaded region ${key}. Total cached: ${this.regions.size}`);
             return xmlData.region;
         } catch (err) {
             logger.error(`[WORLD] Failed to load region ${key}: ${err.message}`);
@@ -51,7 +51,7 @@ class WorldLoader {
         const key = `${x}-${y}-${z}`;
         if (this.regions.has(key)) {
             this.regions.delete(key);
-            logger.info(`[WORLD] Unloaded region ${key}. Total cached: ${this.regions.size}`);
+            logger.log(`[WORLD] Unloaded region ${key}. Total cached: ${this.regions.size}`);
         }
     }
 }

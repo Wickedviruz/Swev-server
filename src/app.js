@@ -76,7 +76,7 @@ async function bootstrap() {
   const io = new Server(server, { cors: { origin: "*" } });
 
   // Du kan bryta ut din socket-setup till en egen modul, t.ex. setupSockets(io, dbPool, monsterLoader)
-  require('./core/socketHandlers')(io, dbPool);
+  require('./core/socketHandlers')(io, dbPool, worldLoader);
 
   // Starta servern
   server.listen(port, () => {

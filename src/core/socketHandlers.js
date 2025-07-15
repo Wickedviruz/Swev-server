@@ -38,6 +38,10 @@ module.exports = function(io, dbPool, worldLoader) {
                 x: character.pos_x ?? worldLoader.worldInfo.spawn_x,
                 y: character.pos_y ?? worldLoader.worldInfo.spawn_y,
                 z: character.pos_z ?? worldLoader.worldInfo.spawn_z,
+                lookbody: character.lookbody ?? 0,
+                lookfeet: character.lookfeet ?? 0,
+                lookhead: character.lookhead ?? 0, 
+                looklegs: character.looklegs ?? 0,
                 looktype: character.looktype ?? 0,
                 direction: character.direction ?? 2,
                 level: character.level,
@@ -74,11 +78,11 @@ module.exports = function(io, dbPool, worldLoader) {
             socket.emit("currentPlayers", Array.from(players.values()));
             socket.broadcast.emit("playerJoined", playerData);
 
-            logger.info(`[SERVER] Player ${character.name} (${character.id}) connected`);
-            logger.info(`[SERVER] Current players count: ${players.size}`);
+            logger.log(`[SERVER] Player ${character.name} (${character.id}) connected`);
+            logger.log(`[SERVER] Current players count: ${players.size}`);
         
         } catch (err) {
-            logger.error("DB error on character lookup:", err.message);
+            logger.error(`DB error on character lookup: ${err.message}`, err); 
             socket.disconnect(true);
         }
 
@@ -125,9 +129,9 @@ module.exports = function(io, dbPool, worldLoader) {
                             leftPlayer.id
                         ]
                     );
-                    logger.info(`Player ${leftPlayer.name} saved and disconnected.`);
+                    logger.log(`Player ${leftPlayer.name} saved and disconnected.`);
                 } catch (err) {
-                    logger.error("Failed to save player data on disconnect:", err);
+                    logger.error(`Failed to save player data on disconnect: ${err.message}`, err);
                 }
                 players.delete(socket.id);
                 io.emit("playerLeft", { id: leftPlayer.id });
