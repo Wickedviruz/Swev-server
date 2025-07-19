@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<weapons>
+	<!-- Rods -->
+	<wand id="23721" level="1" mana="1" min="3" max="7" type="ice"> <!-- The Chiller -->
+		<vocation name="Druid" />
+	</wand>
+    <!-- Swords -->
+	<melee id="2396" action="removecharge" />
+	<melee id="2413" unproperly="1">
+		<vocation name="Knight" />
+	</melee>
+	<melee id="7385" level="20" unproperly="1" />
+	<melee id="2377" level="20" unproperly="1">
+		<vocation name="Knight" />
+	</melee>
+    <!-- Bows and Crossbows -->
+	<distance id="5803" level="75" unproperly="1"> <!-- Arbalest -->
+		<vocation name="Paladin" />
+	</distance>
+	<distance id="8849" level="45" unproperly="1"> <!-- Modified Crossbow -->
+		<vocation name="Paladin" />
+	</distance>
+    <!-- Ammunition -->
+	<distance id="1294" breakchance="3" /> <!-- Small Stone -->
+	<distance id="2111" action="removecount" /> <!-- Snowball -->
+	<distance id="2389" breakchance="3" /> <!-- Spear -->
+</weapons>
