@@ -1,15 +1,20 @@
+// src/core/NpcLoader.js
 const path = require('path');
 const fs = require('fs/promises');
 const xmlLoader = require('../utils/xmlLoader');
-const logger = require("../utils/logger"); // Din befintliga logger
-const luaUtils = require('../utils/lua'); // Din lua.js utility
+const logger = require("../utils/logger");
+const luaUtils = require('../utils/lua');
 
 class NpcLoader {
     constructor() {
         this.npcs = new Map();
+        this.activeGameEngineInstance = null; // Lagra GameEngine-instansen här
     }
 
-    async loadAll() {
+    // MODIFIERAD: loadAll tar nu `gameEngine` som argument
+    async loadAll(gameEngine) {
+        this.activeGameEngineInstance = gameEngine; // Spara instansen
+
         const npcListPath = path.join(__dirname, '..', 'data', 'npc', 'npc.xml');
         let xmlData;
 
@@ -34,26 +39,20 @@ class NpcLoader {
             }
 
             const scriptPath = path.join(__dirname, '..', 'data', 'npc', entry.file);
-            let L = null; // Deklarera L här så den är tillgänglig i catch-blocket
+            let L = null;
 
             try {
                 if (path.extname(entry.file) === '.lua') {
-                    // Kör Lua-filen och få tillbaka Lua-staten (L)
-                    L = luaUtils.runLuaFile(scriptPath);
+                    // VIKTIGT: Skicka med this.activeGameEngineInstance till runLuaFile
+                    L = luaUtils.runLuaFile(scriptPath, this.activeGameEngineInstance);
                 
-
-                    // Skapa en NPC-definition som innehåller Lua-staten
                     const npcDefinition = { 
                         name: entry.name,
-                        _luaState: L // Lagra Lua-staten direkt
+                        _luaState: L 
                     };
                     
-                    // Valfritt: Om du vill ha en snabb referens till t.ex. onGreet utan att behöva
-                    // passera hela _luaState till andra delar av koden, kan du skapa en wrapper här.
-                    // Denna funktion använder _luaState som är lagrad på npcDefinition.
-                    // Den tar emot playerName som argument och anropar Lua-funktionen.
                     npcDefinition.callLuaFunction = async (functionName, ...args) => {
-                        const { lua, to_luastring, to_jsstring } = require("fengari"); // Hämta Fengari igen för anrop
+                        const { lua, to_luastring, to_jsstring } = require("fengari");
 
                         if (!npcDefinition._luaState) {
                             logger.error(`[NPC] Lua state not available for calling ${functionName} on ${npcDefinition.name}`);
@@ -64,12 +63,9 @@ class NpcLoader {
                         let result = null;
 
                         try {
-                            // Hämta funktionen från Lua-staten
                             lua.lua_getglobal(currentL, to_luastring(functionName));
                             if (lua.lua_isfunction(currentL, -1)) {
-                                // Pusha alla argument till Lua-stacken
                                 for (const arg of args) {
-                                    // Beroende på argumenttyp, pusha till Lua-stacken
                                     if (typeof arg === 'string') {
                                         lua.lua_pushstring(currentL, to_luastring(arg));
                                     } else if (typeof arg === 'number') {
@@ -77,21 +73,18 @@ class NpcLoader {
                                     } else if (typeof arg === 'boolean') {
                                         lua.lua_pushboolean(currentL, arg);
                                     }
-                                    // Lägg till fler typer om nödvändigt
                                 }
 
-                                // Anropa funktionen (args.length argument, 1 returvärde, ingen felhanteringsfunktion på stacken)
                                 if (lua.lua_pcall(currentL, args.length, 1, 0) !== lua.LUA_OK) {
                                     const errMsg = to_jsstring(lua.lua_tojsstring(currentL, -1));
                                     logger.error(`[NPC] Error calling Lua function '${functionName}' for ${npcDefinition.name}: ${errMsg}`);
                                 } else {
-                                    // Hämta returvärdet från stacken
-                                    result = to_jsstring(lua.lua_tostring(currentL, -1)); // Antar sträng som returvärde
+                                    result = to_jsstring(lua.lua_tostring(currentL, -1));
                                 }
-                                lua.lua_pop(currentL, 1); // Poppa resultatet/felet
+                                lua.lua_pop(currentL, 1);
                             } else {
                                 logger.warn(`[NPC] Lua function '${functionName}' not found for NPC: ${npcDefinition.name}`);
-                                lua.lua_pop(currentL, 1); // Poppa den icke-existerande funktionen
+                                lua.lua_pop(currentL, 1);
                             }
                         } catch (err) {
                             logger.error(`[NPC] Unhandled error in callLuaFunction for ${npcDefinition.name}: ${err.message}`);
@@ -103,13 +96,11 @@ class NpcLoader {
 
                 } else {
                     logger.warn(`[NPC] Unexpected file type for NPC ${entry.name}: ${entry.file}. Expected .lua`);
-                    // Stäng L här om det inte var en .lua fil men runLuaFile ändå anropades av misstag
                     if (L) luaUtils.closeLuaState(L); 
                     continue;
                 }
             } catch (err) {
                 logger.error(`[NPC] Failed to load NPC data or script for ${entry.name} from file ${entry.file}: ${err.message}`);
-                // Nu är L definierad i scope, så closeLuaState kan anropas säkert
                 if (L) luaUtils.closeLuaState(L); 
             }
         }
@@ -121,12 +112,11 @@ class NpcLoader {
         return this.npcs.get(name);
     }
 
-    // Lägg till en cleanup-metod för att stänga alla Lua-states när servern stängs
     cleanup() {
         this.npcs.forEach(npc => {
             if (npc._luaState) {
                 luaUtils.closeLuaState(npc._luaState);
-                delete npc._luaState; // Ta bort referensen
+                delete npc._luaState;
                 if (logger.debug) {
                     logger.debug(`[NPC] Closed Lua state for ${npc.name}`);
                 } else {
@@ -138,5 +128,4 @@ class NpcLoader {
     }
 }
 
-// Exportera en instans av NpcLoader
 module.exports = new NpcLoader();

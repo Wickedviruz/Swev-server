@@ -1,14 +1,19 @@
+// src/core/GlobalEventLoader.js
 const path = require('path');
 const xmlLoader = require('../utils/xmlLoader');
 const logger = require("../utils/logger");
-const luaUtils = require('../utils/lua'); // Din lua.js utility
+const luaUtils = require('../utils/lua');
 
 class GlobalEventLoader {
     constructor() {
         this.globalEvents = new Map();
+        this.activeGameEngineInstance = null; // Lagra GameEngine-instansen här
     }
 
-    async loadAll() {
+    // MODIFIERAD: loadAll tar nu `gameEngine` som argument
+    async loadAll(gameEngine) { 
+        this.activeGameEngineInstance = gameEngine; // Spara instansen
+
         const globalEventListPath = path.join(__dirname, '..', 'data', 'globalevents', 'globalevents.xml');
         let xmlData;
 
@@ -35,14 +40,13 @@ class GlobalEventLoader {
                 continue;
             }
 
-            // Sökvägen till Lua-skriptet, relativt till 'data/globalevents/scripts'
             const scriptPath = path.join(__dirname, '..', 'data', 'globalevents', 'scripts', entry.script);
-            let L = null; // Deklarera L här så den är tillgänglig i catch-blocket
+            let L = null;
 
             try {
                 if (path.extname(entry.script) === '.lua') {
-                    // Kör Lua-filen och få tillbaka Lua-staten (L)
-                    L = luaUtils.runLuaFile(scriptPath);
+                    // VIKTIGT: Skicka med this.activeGameEngineInstance till runLuaFile
+                    L = luaUtils.runLuaFile(scriptPath, this.activeGameEngineInstance);
                     
                     if (logger.debug) {
                         logger.debug(`[GLOBAL_EVENT] Loaded and executed Lua script for ${entry.name} (${entry.type}) from ${entry.script}`);
@@ -50,17 +54,15 @@ class GlobalEventLoader {
                         logger.log(`[GLOBAL_EVENT] Loaded and executed Lua script for ${entry.name} (${entry.type}) from ${entry.script}`);
                     }
 
-                    // Skapa en global event-definition som innehåller Lua-staten
                     const globalEventDefinition = { 
                         name: entry.name,
                         type: entry.type,
-                        scriptFile: entry.script, // Spara filnamnet för referens
-                        _luaState: L // Lagra Lua-staten direkt
+                        scriptFile: entry.script,
+                        _luaState: L
                     };
                     
-                    // Lägg till en generisk funktion för att kalla på Lua-funktioner i detta event
                     globalEventDefinition.callLuaFunction = async (functionName, ...args) => {
-                        const { lua, to_luastring, to_jsstring } = require("fengari"); // Hämta Fengari igen för anrop
+                        const { lua, to_luastring, to_jsstring } = require("fengari");
 
                         if (!globalEventDefinition._luaState) {
                             logger.error(`[GLOBAL_EVENT] Lua state not available for calling ${functionName} on ${globalEventDefinition.name}`);
@@ -83,13 +85,10 @@ class GlobalEventLoader {
                                     }
                                 }
 
-                                // Anropa funktionen (antal argument, antal returvärden (1 i ditt fall), ingen felhanteringsfunktion på stacken)
                                 if (lua.lua_pcall(currentL, args.length, 1, 0) !== lua.LUA_OK) {
                                     const errMsg = to_jsstring(lua.lua_tojsstring(currentL, -1));
                                     logger.error(`[GLOBAL_EVENT] Error calling Lua function '${functionName}' for ${globalEventDefinition.name}: ${errMsg}`);
                                 } else {
-                                    // Hämta returvärdet från stacken (för onRecord som returnerar true/false)
-                                    // Konvertera till JS boolean eller annat typ
                                     const luaResultType = lua.lua_type(currentL, -1);
                                     if (luaResultType === lua.LUA_TBOOLEAN) {
                                         result = !!lua.lua_toboolean(currentL, -1);
@@ -99,10 +98,10 @@ class GlobalEventLoader {
                                         result = lua.lua_tonumber(currentL, -1);
                                     }
                                 }
-                                lua.lua_pop(currentL, 1); // Poppa resultatet/felet
+                                lua.lua_pop(currentL, 1);
                             } else {
                                 logger.warn(`[GLOBAL_EVENT] Lua function '${functionName}' not found for global event: ${globalEventDefinition.name}`);
-                                lua.lua_pop(currentL, 1); // Poppa den icke-existerande funktionen
+                                lua.lua_pop(currentL, 1);
                             }
                         } catch (err) {
                             logger.error(`[GLOBAL_EVENT] Unhandled error in callLuaFunction for ${globalEventDefinition.name}: ${err.message}`);
@@ -130,12 +129,11 @@ class GlobalEventLoader {
         return this.globalEvents.get(name);
     }
 
-    // Lägg till en cleanup-metod för att stänga alla Lua-states när servern stängs
     cleanup() {
         this.globalEvents.forEach(event => {
             if (event._luaState) {
                 luaUtils.closeLuaState(event._luaState);
-                delete event._luaState; // Ta bort referensen
+                delete event._luaState;
                 if (logger.debug) {
                     logger.debug(`[GLOBAL_EVENT] Closed Lua state for ${event.name}`);
                 } else {

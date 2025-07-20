@@ -1,2 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<world name="Starting Area" size_x="500" size_y="500" size_z="1" region_size="32" spawn_x="250" spawn_y="250" spawn_z="0" />
+<world name="Generated Test World" description="An automatically generated simple test world">
+    <spawn x="1920" y="1408" z="7"/>
+</world>

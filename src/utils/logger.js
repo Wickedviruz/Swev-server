@@ -26,6 +26,12 @@ function log(msg) {
   writeToFile(line);
 }
 
+function debug(msg) {
+  const line = `[${now()}] [DEBUG] ${msg}`;
+  console.debug(`[${now()}] ` + chalk.red('[DEBUG]') + ' ' + msg);
+  writeToFile(line);
+}
+
 function success(msg) {
   const line = `[${now()}] [OK] ${msg}`;
   console.log(`[${now()}] ` + chalk.green('[OK]') + ' ' + msg);
@@ -44,4 +50,4 @@ function error(msg) {
   writeToFile(line);
 }
 
-module.exports = { log, success, warn, error };
+module.exports = { log, debug, success, warn, error };
